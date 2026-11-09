@@ -1,0 +1,46 @@
+import {useState} from 'react';import {api,useLoad} from './api.js';import {useCtx} from './ctx.js';import {ymd,money,hourNow} from './util.js';
+const Items=({list=[]})=><div className="chips">{list.map(i=><span className="chip" key={i}>{i}</span>)}</div>;
+
+export function Today(){const{user,cfg,run}=useCtx(),[menu]=useLoad('/menu'),[notes]=useLoad('/notices'),[w]=useLoad('/wallet'),[diet,setDiet]=useState(user.diet);
+ const h=hourNow(),meals=Object.keys(cfg.meals),cur=meals.find(m=>h<cfg.meals[m].end)||meals[0],t=cfg.meals[cur],day=cfg.days[new Date().getDay()];
+ return<>{notes?.[0]&&<div className={`notice ${notes[0].category==='Urgent'?'urgent':''}`}>📢 <b style={{color:notes[0].category==='Urgent'?'#d9480f':'inherit'}}>Notice:</b> {notes[0].text}</div>}
+ <div className="grid g4" style={{marginBottom:18}}>
+  <div className="card stat g"><small>Wallet balance</small><span className="big">{money(w?.balance??user.balance)}</span></div>
+  <div className="card stat o"><small>{h>=t.start&&h<t.end?'Serving now':'Up next'}</small><span className="big">{cur}</span></div>
+  <div className="card stat"><small>Price</small><span className="big">{money(t.price)}</span></div></div>
+ <div className="grid g2" style={{marginBottom:18}}>
+  <div className="card"><h3>Today's menu · {day}</h3>{meals.map(m=><div key={m} style={{marginBottom:14}}><b>{m}</b><Items list={menu?.[day]?.[m]}/></div>)}</div>
+  <div className="card"><h3>Diet Preference</h3><p className="legend">Currently: <b>{user.diet}</b>. Request a change to switch your meal type.</p>
+   <div className="seg" style={{marginBottom:14}}><button className={diet==='Veg'?'on':''} onClick={()=>setDiet('Veg')}>Veg</button><button className={diet==='Non-Veg'?'on':''} onClick={()=>setDiet('Non-Veg')}>Non-Veg</button></div>
+   <button className="btn g" onClick={async()=>{if(await run(()=>api('/diet/request',{method:'POST',body:{diet}}),'Diet change request submitted.'))setDiet(user.diet)}}>Request Change</button></div>
+ </div>
+</>}
+
+export function MenuPage(){const{user,cfg,run}=useCtx(),[menu,reload]=useLoad('/menu'),[day,setDay]=useState(cfg.days[new Date().getDay()]),[draft,setDraft]=useState({}),edit=user.level==='head';
+ return<><div className="tabs">{[...cfg.days.slice(1),cfg.days[0]].map(d=><button key={d} className={'tab '+(d===day?'on':'')} onClick={()=>setDay(d)}>{d}</button>)}</div>
+ <div className="grid g2">{Object.keys(cfg.meals).map(m=>{const items=menu?.[day]?.[m]||[],k=day+m,val=draft[k]??items.join(', ');
+  return<div className="card meal" key={m}><h3>{m}</h3>{edit?<><input value={val} onChange={e=>setDraft({...draft,[k]:e.target.value})}/>
+  <button className="btn g" onClick={async()=>{if(await run(()=>api('/menu',{method:'PUT',body:{day,meal:m,items:val.split(',').map(x=>x.trim()).filter(Boolean)}}),'Menu saved.'))reload()}}>Save</button></>
+  :<ul>{items.map(i=><li key={i}>{i}</li>)}</ul></div>})}</div></>}
+
+export function Meals(){const{cfg,run}=useCtx(),[skips,reload]=useLoad('/skips'),n=new Date();
+ const days=[...Array(7)].map((_,i)=>{const d=new Date(n.getFullYear(),n.getMonth(),n.getDate()+i);return{d:ymd(d),l:i?cfg.days[d.getDay()]:'Today'}});
+ return<div className="card"><h3>Your meals for the next 7 days</h3><p className="legend">Tap a meal to skip it and avoid the charge. Tap again to re-book. Changes close 2 hours before each meal.</p>
+ <div className="week">{days.map(x=><div className="row" key={x.d}><b>{x.l}</b>{Object.keys(cfg.meals).map(m=>
+  <button key={m} className={'slot '+(skips?.includes(`${x.d}|${m}`)?'skip':'')} onClick={async()=>{await run(()=>api('/skips/toggle',{method:'POST',body:{date:x.d,meal:m}}));reload()}}>{m}</button>)}</div>)}</div></div>}
+
+export function Wallet(){const{run}=useCtx(),[w]=useLoad('/wallet'),[t,rt]=useLoad('/topups'),[f,setF]=useState({amount:'',ref:''});
+ return<div className="grid g2"><div className="card"><h3>Add money</h3><p className="legend">Pay by UPI, then enter the transaction reference. Your wallet is credited once the mess office confirms the payment.</p>
+ <input type="number" min="1" placeholder="Amount in ₹" value={f.amount} onChange={e=>setF({...f,amount:e.target.value})}/>
+ <input placeholder="Payment reference" value={f.ref} onChange={e=>setF({...f,ref:e.target.value})}/>
+ <button className="btn g" onClick={async()=>{if(await run(()=>api('/topups',{method:'POST',body:f}),'Request sent to the mess office.')){setF({amount:'',ref:''});rt()}}}>Send request</button>
+ {t?.slice(0,4).map(x=><div className="tx" key={x._id}><span>{money(x.amount)} <small>{x.ref}</small></span><span className={'pill '+(x.status==='approved'?'resolved':'open')}>{x.status}</span></div>)}</div>
+ <div className="card"><h3>Balance {money(w?.balance||0)}</h3>{w?.tx.map((x,i)=><div className="tx" key={i}><span>{x.n}<br/><small>{new Date(x.d).toLocaleString()}</small></span><span className={x.a>0?'pos':'neg'}>{x.a>0?'+':''}{money(x.a)}</span></div>)}</div></div>}
+
+export function Feedback(){const{cfg,run}=useCtx(),[d,rd]=useLoad('/feedback'),[f,setF]=useState({meal:'Lunch',stars:0,text:''});
+ return<div className="grid g2"><div className="card"><h3>Rate a meal</h3>
+ <select value={f.meal} onChange={e=>setF({...f,meal:e.target.value})}>{Object.keys(cfg.meals).map(m=><option key={m}>{m}</option>)}</select>
+ <div className="stars">{[1,2,3,4,5].map(i=><button key={i} className={i<=f.stars?'on':''} aria-label={i+' stars'} onClick={()=>setF({...f,stars:i})}>⭐</button>)}</div><br/>
+ <textarea maxLength={240} value={f.text} onChange={e=>setF({...f,text:e.target.value})} placeholder="What was good? What could be better?"/>
+ <button className="btn" onClick={async()=>{if(await run(()=>api('/feedback',{method:'POST',body:f}),'Thank you for your feedback!')){setF({...f,stars:0,text:''});rd()}}}>Send feedback</button></div>
+ <div className="card"><h3>Recent feedback</h3>{d?.recent.map(x=><div className="fbi" key={x._id}><b>{x.meal}</b> {'⭐'.repeat(x.stars)}<p>{x.text||'No comment'}</p><small>{x.name}</small></div>)}</div></div>}
