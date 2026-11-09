@@ -2,6 +2,8 @@
 
 **A Full-Stack MERN Mess Management System**
 
+**Link-https://peppy-dolphin-668b80.netlify.app/**
+
 A centralized digital mess management platform designed for IIIT Bhubaneswar to simplify meal booking, wallet management, payment approvals, and daily mess operations.
 
 Built using the **MERN Stack (MongoDB, Express.js, React.js, and Node.js)**, Mess Hub provides dedicated dashboards for students and mess administrators, ensuring transparent, secure, and efficient mess management.
