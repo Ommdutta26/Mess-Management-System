@@ -3,8 +3,9 @@
 **A Full-Stack MERN Mess Management System**
 
 **Link-https://peppy-dolphin-668b80.netlify.app/**
-**Project Explanation Video-https://drive.google.com/drive/folders/1qr534tzOAkrLHtXV1gNJWqbDGl30pu9M?usp=sha
-ring**
+
+
+**Project Explanation Video-https://drive.google.com/drive/folders/1qr534tzOAkrLHtXV1gNJWqbDGl30pu9M?usp=sharing**
 
 A centralized digital mess management platform designed for IIIT Bhubaneswar to simplify meal booking, wallet management, payment approvals, and daily mess operations.
 
